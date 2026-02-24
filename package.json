@@ -26,6 +26,7 @@
     "appId": "io.github.optiscaler.installer",
     "productName": "OptiScaler Installer",
     "copyright": "MIT License",
+    "publish": "never",
     "files": [
       "index.html",
       "main.js",
