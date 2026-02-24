@@ -64,5 +64,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: all-artifacts/**/*
+          skip_existing: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
