@@ -1,71 +1,66 @@
-{
-  "name": "optiscaler-installer",
-  "version": "1.0.0",
-  "description": "Cross-platform GUI installer for OptiScaler",
-  "main": "main.js",
-  "license": "MIT",
-  "author": "dario-gms <86432208+dario-gms@users.noreply.github.com>",
-  "homepage": "https://github.com/dario-gms/optiscaler-installer",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/dario-gms/optiscaler-installer"
-  },
-  "scripts": {
-    "start": "electron .",
-    "build:win": "electron-builder --win --x64",
-    "build:linux": "electron-builder --linux --x64",
-    "build:all": "electron-builder --win --linux --x64",
-    "dist": "npm run build:all",
-    "pack": "electron-builder --dir"
-  },
-  "devDependencies": {
-    "electron": "^30.0.0",
-    "electron-builder": "^24.0.0"
-  },
-  "build": {
-    "appId": "io.github.optiscaler.installer",
-    "productName": "OptiScaler Installer",
-    "copyright": "MIT License",
-    "files": [
-      "index.html",
-      "main.js",
-      "preload.js",
-      "assets/**/*"
-    ],
-    "directories": {
-      "output": "dist"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        },
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ],
-      "icon": "assets/icon.ico"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": ["x64"]
-        },
-        {
-          "target": "deb",
-          "arch": ["x64"]
-        }
-      ],
-      "icon": "assets/icon.png",
-      "category": "Utility"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": true
-    }
-  }
-}
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: npm run build:win
+      
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: npm run build:linux
+      
+      - name: Upload artifacts (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist/
+      
+      - name: Upload artifacts (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: dist/
+  
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: all-artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
