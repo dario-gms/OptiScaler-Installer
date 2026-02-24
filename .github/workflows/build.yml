@@ -68,7 +68,11 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release-artifacts/**/*
+          files: |
+            release-artifacts/**/*.exe
+            release-artifacts/**/*.exe.blockmap
+            release-artifacts/**/*.AppImage
+            release-artifacts/**/*.deb
           skip_existing: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
