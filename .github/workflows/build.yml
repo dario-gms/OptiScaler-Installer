@@ -36,14 +36,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifacts
-          path: dist/
+          path: |
+            dist/OptiScaler*.exe
+            dist/*.blockmap
       
       - name: Upload artifacts (Linux)
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: linux-artifacts
-          path: dist/
+          path: |
+            dist/OptiScaler*.AppImage
+            dist/*.deb
   
   release:
     needs: build
@@ -63,7 +67,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: all-artifacts/**/*
+          files: all-artifacts/**/*.{exe,AppImage,deb,blockmap}
           skip_existing: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
