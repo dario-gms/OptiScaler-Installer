@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OptiScaler Installer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0c0f;
+      --surface: #111417;
+      --surface2: #181c21;
+      --border: #222830;
+      --accent: #00e5ff;
+      --text: #d4e2f0;
+      --text-dim: #637280;
+      --success: #00c896;
+      --warning: #ffb700;
+      --error: #ff4757;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Barlow', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+      pointer-events: none; z-index: 9999;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex; align-items: center; gap: 16px;
+      background: var(--surface);
+    }
+
+    .logo-mark {
+      width: 34px; height: 34px;
+      border: 2px solid var(--accent);
+      position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .logo-mark::before {
+      content: ''; position: absolute; inset: 3px;
+      background: var(--accent);
+      clip-path: polygon(50% 0%, 100% 100%, 0% 100%); opacity: 0.8;
+    }
+    .logo-text { font-family: var(--mono); font-size: 17px; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; }
+    .logo-sub  { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; margin-left: auto; font-family: var(--mono); }
+
+    /* ── Top tabs ── */
+    .top-tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .tab-btn {
+      padding: 12px 28px;
+      font-family: var(--sans); font-size: 14px; font-weight: 600;
+      color: var(--text-dim); background: transparent; border: none;
+      cursor: pointer; position: relative; transition: color 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--text); }
+    .tab-btn.active::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent);
+    }
+    .tab-btn.uninstall-tab.active::after { background: var(--error); }
+
+    /* ── Tab panels ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: flex; flex: 1; }
+
+    /* ── Install tab layout ── */
+    .layout { display: grid; grid-template-columns: 260px 1fr; flex: 1; }
+
+    .sidebar {
+      background: var(--surface); border-right: 1px solid var(--border);
+      padding: 20px 0; display: flex; flex-direction: column; gap: 2px;
+    }
+
+    .sidebar-section {
+      padding: 7px 20px 3px; font-size: 11px; font-family: var(--mono);
+      color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; margin-top: 10px;
+    }
+
+    .step-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px; position: relative; transition: background 0.15s;
+    }
+    .step-item.active { background: var(--surface2); }
+    .step-item.active::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 2px; background: var(--accent);
+    }
+    .step-num {
+      width: 26px; height: 26px; border: 1px solid var(--border); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 12px; color: var(--text-dim); flex-shrink: 0;
+    }
+    .step-item.active .step-num { border-color: var(--accent); color: var(--accent); }
+    .step-item.done .step-num { background: var(--success); border-color: var(--success); color: #000; font-size: 13px; }
+    .step-item.done .step-num::after { content: '✓'; }
+    .step-label { font-size: 14px; color: var(--text-dim); }
+    .step-item.active .step-label { color: var(--text); font-weight: 600; }
+
+    /* ── Main content ── */
+    .main { padding: 36px; overflow-y: auto; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .panel-title { font-size: 23px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
+    .panel-desc  { font-size: 15px; color: var(--text-dim); margin-bottom: 28px; line-height: 1.65; }
+
+    /* ── GPU cards ── */
+    .gpu-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+      gap: 12px; margin-bottom: 28px;
+    }
+    .gpu-card {
+      border: 1px solid var(--border); padding: 17px;
+      cursor: pointer; transition: all 0.15s; position: relative; background: var(--surface);
+    }
+    .gpu-card:hover    { border-color: var(--accent); background: var(--surface2); }
+    .gpu-card.selected { border-color: var(--accent); background: var(--surface2); }
+    .gpu-card.selected::after {
+      content: ''; position: absolute; top: 9px; right: 9px;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    }
+    .gpu-vendor { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .gpu-name   { font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .gpu-name span { font-weight: 300; font-size: 12px; }
+    .gpu-note   { font-size: 12px; color: var(--text-dim); margin-top: 8px; line-height: 1.4; }
+
+    /* ── Path row ── */
+    .path-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .path-input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--mono); font-size: 14px;
+      padding: 11px 14px; outline: none; transition: border-color 0.15s;
+    }
+    .path-input:focus { border-color: var(--accent); }
+    .path-input::placeholder { color: var(--text-dim); }
+
+    /* ── Buttons ── */
+    .btn {
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+      padding: 10px 20px; cursor: pointer; font-family: var(--sans);
+      font-size: 14px; font-weight: 600; transition: all 0.15s; letter-spacing: 0.3px;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
+    .btn-primary:hover { background: transparent; color: var(--accent); }
+    .btn-danger  { background: var(--error);  border-color: var(--error);  color: #fff; font-weight: 700; }
+    .btn-danger:hover { background: transparent; color: var(--error); }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+
+    /* ── Log output ── */
+    .scan-output {
+      background: var(--surface); border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 13px; padding: 14px;
+      max-height: 240px; overflow-y: auto; line-height: 1.85; margin-bottom: 20px;
+    }
+    .log-line { display: flex; gap: 12px; }
+    .log-time { color: var(--text-dim); flex-shrink: 0; }
+    .log-ok   { color: var(--success); }
+    .log-warn { color: var(--warning); }
+    .log-err  { color: var(--error);   }
+    .log-info { color: var(--accent);  }
+
+    /* ── Scan result cards ── */
+    .result-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-bottom: 22px; }
+    .result-card { border: 1px solid var(--border); padding: 13px 15px; background: var(--surface); }
+    .result-card.found   { border-color: var(--success); }
+    .result-card.missing { opacity: 0.5; }
+    .result-tag  { font-size: 10px; font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .result-card.found .result-tag   { color: var(--success); }
+    .result-card.missing .result-tag { color: var(--text-dim); }
+    .result-file { font-size: 14px; font-weight: 700; }
+    .result-sub  { font-size: 11px; color: var(--text-dim); font-family: var(--mono); margin-top: 3px; word-break: break-all; }
+
+    /* ── Status badge ── */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 5px 12px; font-family: var(--mono); font-size: 12px;
+      letter-spacing: 1px; text-transform: uppercase; border: 1px solid currentColor; margin-bottom: 18px;
+    }
+    .status-badge.ok   { color: var(--success); }
+    .status-badge.warn { color: var(--warning); }
+    .status-badge.fail { color: var(--error);   }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    /* ── Options ── */
+    .option-row {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 15px 0; border-bottom: 1px solid var(--border);
+    }
+    .option-row:last-child { border-bottom: none; }
+    .toggle { position: relative; width: 38px; height: 22px; flex-shrink: 0; margin-top: 2px; }
+    .toggle input { display: none; }
+    .toggle-track { position: absolute; inset: 0; background: var(--border); cursor: pointer; transition: background .2s; }
+    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle-thumb { position: absolute; top: 4px; left: 4px; width: 14px; height: 14px; background: var(--bg); transition: transform .2s; pointer-events: none; }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+    .option-info .option-label { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .option-info .option-desc  { font-size: 13px; color: var(--text-dim); line-height: 1.55; }
+
+    /* ── Shortcut key picker ── */
+    .shortcut-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .key-btn {
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-family: var(--mono); font-size: 13px;
+      padding: 6px 14px; cursor: pointer; transition: all .15s;
+    }
+    .key-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .key-btn.active-key { border-color: var(--accent); background: var(--accent); color: #000; font-weight: 700; }
+    .key-capture-hint { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+
+    /* ── Progress bar ── */
+    .progress-wrap { margin: 18px 0; background: var(--surface); border: 1px solid var(--border); height: 5px; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--accent); transition: width .3s ease; position: relative; }
+    .progress-bar::after {
+      content: ''; position: absolute; top:0; right:0; width: 50px; height: 100%;
+      background: linear-gradient(90deg,transparent,rgba(255,255,255,.35));
+      animation: shimmer 1s infinite;
+    }
+    @keyframes shimmer { 0%{opacity:0} 50%{opacity:1} 100%{opacity:0} }
+
+    /* ── Footer ── */
+    .footer-bar {
+      border-top: 1px solid var(--border); padding: 14px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); position: sticky; bottom: 0;
+    }
+    .footer-bar.hidden { display: none; }
+    .footer-info   { font-size: 13px; color: var(--text-dim); font-family: var(--mono); }
+    .footer-actions { display: flex; gap: 10px; }
+
+    /* ── Install result ── */
+    .install-result { text-align: center; padding: 36px 20px; }
+    .result-icon  { font-size: 50px; margin-bottom: 14px; }
+    .result-title { font-size: 25px; font-weight: 700; margin-bottom: 10px; }
+    .result-detail { font-size: 15px; color: var(--text-dim); line-height: 1.7; max-width: 520px; margin: 0 auto 22px; }
+    .copied-files {
+      background: var(--surface); border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 13px; padding: 14px;
+      max-height: 190px; overflow-y: auto; text-align: left; margin: 0 auto 22px; max-width: 540px;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      padding: 13px 16px; font-size: 14px; line-height: 1.65;
+      color: var(--text-dim); margin-bottom: 18px;
+    }
+    .info-box strong { color: var(--text); }
+    .info-box.warn-box { border-left-color: var(--warning); }
+    .info-box.danger-box { border-left-color: var(--error); }
+
+    /* ── Select ── */
+    select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 9px 14px; font-family: var(--mono); font-size: 13px; outline: none; cursor: pointer; }
+    select:focus { border-color: var(--accent); }
+    .version-select-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+    .version-label { font-size: 13px; color: var(--text-dim); font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── Uninstall tab ── */
+    .uninstall-content { max-width: 640px; padding: 36px; margin: 0 auto; flex: 1; }
+
+    .manifest-card {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 18px 20px; margin-bottom: 20px;
+    }
+    .manifest-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .manifest-row:last-child { border-bottom: none; }
+    .manifest-label { color: var(--text-dim); font-family: var(--mono); font-size: 13px; }
+    .manifest-value { font-weight: 600; font-family: var(--mono); font-size: 13px; }
+
+    .file-list { font-family: var(--mono); font-size: 13px; padding: 14px; background: var(--surface); border: 1px solid var(--border); max-height: 180px; overflow-y: auto; margin-bottom: 18px; }
+    .file-list-item { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+    .file-badge { font-size: 10px; padding: 2px 7px; border: 1px solid currentColor; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
+    .badge-backed { color: var(--success); }
+    .badge-new    { color: var(--text-dim); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark"></div>
+  <span class="logo-text">OptiScaler</span>
+  <span class="logo-sub">Installer v1.2.0</span>
+</header>
+
+<!-- Mode tabs -->
+<div class="top-tabs">
+  <button class="tab-btn active" id="tab-install"   onclick="switchTab('install')">Install</button>
+  <button class="tab-btn uninstall-tab" id="tab-uninstall" onclick="switchTab('uninstall')">Uninstall / Restore</button>
+</div>
+
+<!-- ══ INSTALL TAB ═══════════════════════════════════════════════════════════ -->
+<div class="tab-panel active" id="tabpanel-install" style="flex-direction:column">
+  <div class="layout" style="flex:1">
+    <nav class="sidebar">
+      <div class="sidebar-section">Setup</div>
+      <div class="step-item active" data-step="0"><div class="step-num">1</div><span class="step-label">Select GPU</span></div>
+      <div class="step-item"        data-step="1"><div class="step-num">2</div><span class="step-label">Game Directory</span></div>
+      <div class="step-item"        data-step="2"><div class="step-num">3</div><span class="step-label">Scan Files</span></div>
+      <div class="sidebar-section">Install</div>
+      <div class="step-item"        data-step="3"><div class="step-num">4</div><span class="step-label">Options</span></div>
+      <div class="step-item"        data-step="4"><div class="step-num">5</div><span class="step-label">Install</span></div>
+    </nav>
+
+    <main class="main">
+
+      <!-- Step 0: GPU -->
+      <div class="panel active" id="panel-0">
+        <div class="panel-title">Select your GPU</div>
+        <p class="panel-desc">OptiScaler's installation differs based on your GPU vendor. The correct spoofing method and DLL selection depend on this choice.</p>
+        <div class="gpu-grid">
+          <div class="gpu-card" data-gpu="nvidia-rtx" data-vendor="nvidia">
+            <div class="gpu-vendor">NVIDIA</div>
+            <div class="gpu-name">RTX Series<br><span>20xx / 30xx / 40xx / 50xx</span></div>
+            <div class="gpu-note">Native DLSS — no spoofing needed</div>
+          </div>
+          <div class="gpu-card" data-gpu="nvidia-gtx" data-vendor="nvidia">
+            <div class="gpu-vendor">NVIDIA</div>
+            <div class="gpu-name">GTX / 16xx<br><span>Pascal, Turing (no Tensor)</span></div>
+            <div class="gpu-note">DLSS spoof required</div>
+          </div>
+          <div class="gpu-card" data-gpu="amd-rdna3" data-vendor="amd">
+            <div class="gpu-vendor">AMD</div>
+            <div class="gpu-name">RX 7000 / RDNA 3<br><span>& RDNA 2 (RX 6000)</span></div>
+            <div class="gpu-note">FakeNvapi + DXGI spoof</div>
+          </div>
+          <div class="gpu-card" data-gpu="amd-rdna4" data-vendor="amd">
+            <div class="gpu-vendor">AMD</div>
+            <div class="gpu-name">RX 9000 / RDNA 4<br><span>Native FSR4 support</span></div>
+            <div class="gpu-note">FakeNvapi + FSR4 enabled</div>
+          </div>
+          <div class="gpu-card" data-gpu="intel-arc" data-vendor="intel">
+            <div class="gpu-vendor">INTEL</div>
+            <div class="gpu-name">Arc Series<br><span>A-series / B-series</span></div>
+            <div class="gpu-note">XMX path via DXGI spoof</div>
+          </div>
+        </div>
+        <div id="gpu-selection-note" class="info-box" style="display:none"><span id="gpu-note-text"></span></div>
+      </div>
+
+      <!-- Step 1: Directory -->
+      <div class="panel" id="panel-1">
+        <div class="panel-title">Game directory</div>
+        <p class="panel-desc">Point to the folder containing the game's main executable. The scanner detects upscaler DLL entry points from this location.</p>
+        <div class="path-row">
+          <input type="text" class="path-input" id="game-path-input" placeholder="e.g. C:\Games\SomeGame or /home/user/.steam/steamapps/common/..." />
+          <button class="btn" onclick="browseFolder()">Browse</button>
+        </div>
+        <div class="info-box">
+          <strong>What the scanner looks for:</strong> nvngx_dlss.dll, sl.dlss.dll, libxess.dll, amd_fidelityfx_dx12.dll, amd_fidelityfx_upscaler_dx12.dll, amd_fidelityfx_framegeneration_dx12.dll, ffx_fsr2/fsr3 variants, and their Linux equivalents. At least one must be present.
+        </div>
+      </div>
+
+      <!-- Step 2: Scan -->
+      <div class="panel" id="panel-2">
+        <div class="panel-title">Scanning game files</div>
+        <p class="panel-desc">Analyzing the directory for upscaler entry points. Files with alternate naming conventions (e.g. Clair Obscur, Space Marine 2) are also detected.</p>
+        <button class="btn btn-primary" id="scan-btn" onclick="runScan()">Run Scan</button>
+        <div class="progress-wrap" id="scan-progress" style="display:none">
+          <div class="progress-bar" id="scan-progress-bar" style="width:0%"></div>
+        </div>
+        <div class="scan-output" id="scan-log" style="display:none"></div>
+        <div id="scan-results" style="display:none">
+          <div id="scan-status-badge"></div>
+          <div id="existing-install-notice" style="display:none" class="info-box warn-box"></div>
+          <div class="result-cards" id="result-cards"></div>
+          <div class="info-box" id="scan-info-box" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Step 3: Options -->
+      <div class="panel" id="panel-3">
+        <div class="panel-title">Installation options</div>
+        <p class="panel-desc">Configure what gets installed. Defaults are tuned for your selected GPU. Any existing files will be backed up before being replaced.</p>
+
+        <div class="version-select-row">
+          <span class="version-label">OptiScaler version</span>
+          <select id="version-select">
+            <option value="latest">Latest stable</option>
+            <option value="nightly">Nightly (unstable)</option>
+          </select>
+        </div>
+
+        <div class="option-row">
+          <label class="toggle"><input type="checkbox" id="opt-dxgi" checked /><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <div class="option-info">
+            <div class="option-label">DXGI Spoofing</div>
+            <div class="option-desc">Installs OptiScaler as dxgi.dll — enables GPU spoofing for non-Nvidia hardware. Required for AMD and Intel to unlock the DLSS input path.</div>
+          </div>
+        </div>
+        <div class="option-row">
+          <label class="toggle"><input type="checkbox" id="opt-fakenvapi" /><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <div class="option-info">
+            <div class="option-label">FakeNvapi</div>
+            <div class="option-desc">Installs nvapi64.dll alongside OptiScaler. Enables Anti-Lag 2 on AMD RDNA1+ and LatencyFlex for Reflex-enabled games. <strong>Do not use with online games.</strong></div>
+          </div>
+        </div>
+        <div class="option-row">
+          <label class="toggle"><input type="checkbox" id="opt-vulkan" /><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <div class="option-info">
+            <div class="option-label">Vulkan Spoofing</div>
+            <div class="option-desc">Enables Vulkan GPU spoofing in OptiScaler.ini. Needed for Vulkan-based DLSS games on non-Nvidia hardware. Not compatible with all games (Doom Eternal still doesn't work).</div>
+          </div>
+        </div>
+        <div class="option-row">
+          <label class="toggle"><input type="checkbox" id="opt-nukem" /><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <div class="option-info">
+            <div class="option-label">dlssg-to-fsr3 (Nukem's mod)</div>
+            <div class="option-desc">Enables FSR3 frame generation for games with native DLSS-FG. Bundled since OptiScaler 0.9. DX12 only.</div>
+          </div>
+        </div>
+        <div class="option-row">
+          <label class="toggle"><input type="checkbox" id="opt-ini" checked /><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <div class="option-info">
+            <div class="option-label">Generate OptiScaler.ini</div>
+            <div class="option-desc">Writes a pre-configured OptiScaler.ini based on your GPU. If one already exists it will be backed up first.</div>
+          </div>
+        </div>
+
+        <!-- Shortcut key -->
+        <div class="option-row" style="flex-direction:column;align-items:flex-start;gap:12px">
+          <div>
+            <div class="option-label" style="font-weight:700;font-size:14px;margin-bottom:4px">Overlay shortcut key</div>
+            <div class="option-desc" style="font-size:13px;color:var(--text-dim);margin-bottom:14px">The key that opens the in-game overlay. Default is INSERT. Some compact/laptop keyboards don't have it — pick an alternative or press any key.</div>
+          </div>
+          <div class="shortcut-row" id="shortcut-buttons">
+            <button class="key-btn active-key" data-key="INSERT" onclick="selectKey(this)">INSERT</button>
+            <button class="key-btn" data-key="HOME"   onclick="selectKey(this)">HOME</button>
+            <button class="key-btn" data-key="END"    onclick="selectKey(this)">END</button>
+            <button class="key-btn" data-key="F12"    onclick="selectKey(this)">F12</button>
+            <button class="key-btn" data-key="F11"    onclick="selectKey(this)">F11</button>
+            <button class="key-btn" data-key="DELETE" onclick="selectKey(this)">DELETE</button>
+            <button class="key-btn" data-key="PAUSE"  onclick="selectKey(this)">PAUSE</button>
+            <button class="key-btn" id="btn-capture"  onclick="startCapture()">Press a key…</button>
+          </div>
+          <div class="key-capture-hint" id="capture-hint" style="display:none">Press any key on your keyboard to set it as the shortcut (modifiers like Shift/Ctrl are ignored).</div>
+        </div>
+      </div>
+
+      <!-- Step 4: Install -->
+      <div class="panel" id="panel-4">
+        <div class="panel-title">Installing</div>
+        <p class="panel-desc" id="install-desc">Existing files will be backed up to <code style="font-family:var(--mono);color:var(--accent)">.optiscaler_backup/</code> before being replaced. Do not close this window.</p>
+        <div id="install-running">
+          <div class="progress-wrap"><div class="progress-bar" id="install-progress-bar" style="width:0%"></div></div>
+          <div class="scan-output" id="install-log" style="display:none"></div>
+          <button class="btn btn-primary" id="install-btn" onclick="runInstall()" style="margin-top:16px">Start Installation</button>
+        </div>
+        <div id="install-result" style="display:none"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="footer-bar" id="footer-bar">
+    <span class="footer-info" id="footer-info">Step 1 of 5 — Select your GPU vendor</span>
+    <div class="footer-actions">
+      <button class="btn" id="btn-back" onclick="goBack()" disabled>Back</button>
+      <button class="btn btn-primary" id="btn-next" onclick="goNext()" disabled>Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ UNINSTALL TAB ══════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tabpanel-uninstall">
+  <div class="uninstall-content">
+    <div class="panel-title">Uninstall / Restore backup</div>
+    <p class="panel-desc">Select the game directory where OptiScaler was installed. The installer will restore any files it backed up and remove everything it added.</p>
+
+    <div class="path-row">
+      <input type="text" class="path-input" id="uninstall-path-input" placeholder="Game directory path..." />
+      <button class="btn" onclick="browseUninstallFolder()">Browse</button>
+      <button class="btn" id="check-btn" onclick="checkInstall()" style="flex-shrink:0">Check</button>
+    </div>
+
+    <div id="uninstall-manifest-area" style="display:none">
+
+      <div id="no-manifest-msg" style="display:none" class="info-box danger-box">
+        <strong>No OptiScaler installation found</strong> in this directory.<br>
+        Only installations performed by this installer can be automatically uninstalled (requires the <code style="font-family:var(--mono)">optiscaler_manifest.json</code> file).
+      </div>
+
+      <div id="manifest-found-area" style="display:none">
+        <div class="status-badge ok" style="margin-bottom:18px"><div class="status-dot"></div>OptiScaler installation found</div>
+        <div class="manifest-card" id="manifest-info"></div>
+        <div class="info-box" style="margin-top:0">
+          <strong>Files that will be affected:</strong>
+        </div>
+        <div class="file-list" id="uninstall-file-list"></div>
+        <div class="info-box danger-box">
+          <strong>This will:</strong> remove all OptiScaler files and restore the originals from backup. The game will go back to exactly its pre-install state.
+        </div>
+        <button class="btn btn-danger" id="uninstall-btn" onclick="runUninstall()">Uninstall &amp; Restore</button>
+      </div>
+
+    </div>
+
+    <div class="progress-wrap" id="uninstall-progress" style="display:none">
+      <div class="progress-bar" id="uninstall-progress-bar" style="width:0%;background:var(--error)"></div>
+    </div>
+    <div class="scan-output" id="uninstall-log" style="display:none"></div>
+    <div id="uninstall-result" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = {
+  step: 0,
+  totalSteps: 5,
+  gpu: null, gpuVendor: null,
+  gamePath: '',
+  scanResults: null,
+  scanPassed: false,
+  existingInstall: null,
+  shortcutKey: 'INSERT',
+};
+
+const GPU_NOTES = {
+  'nvidia-rtx': 'RTX GPUs support DLSS natively. OptiScaler will use your existing nvngx_dlss.dll. DXGI spoof is auto-disabled on RTX.',
+  'nvidia-gtx': 'GTX and 16xx GPUs lack Tensor cores. OptiScaler will spoof the GPU as RTX via DXGI to enable the DLSS pathway.',
+  'amd-rdna3':  'AMD GPUs require DXGI spoofing (reports as RTX 4090) and FakeNvapi for Anti-Lag 2 / Reflex. FSR is the recommended output backend.',
+  'amd-rdna4':  'RDNA4 GPUs get native FSR4 support. DXGI spoofing still needed to unlock DLSS inputs. Anti-Lag 2 via FakeNvapi.',
+  'intel-arc':  'Intel Arc activates its XMX path when DXGI spoofing is active and XeSS is detected. XeSS is the recommended output backend.',
+};
+
+const STEP_LABELS = [
+  'Step 1 of 5 — Select your GPU vendor',
+  'Step 2 of 5 — Set game directory',
+  'Step 3 of 5 — Scan game files',
+  'Step 4 of 5 — Configure options',
+  'Step 5 of 5 — Install',
+];
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-install').classList.toggle('active', tab === 'install');
+  document.getElementById('tab-uninstall').classList.toggle('active', tab === 'uninstall');
+  document.getElementById('tabpanel-install').classList.toggle('active', tab === 'install');
+  document.getElementById('tabpanel-uninstall').classList.toggle('active', tab === 'uninstall');
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function updateNav() {
+  document.querySelectorAll('.step-item').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i === state.step) el.classList.add('active');
+    else if (i < state.step) el.classList.add('done');
+  });
+  document.querySelectorAll('.panel').forEach((el, i) => el.classList.toggle('active', i === state.step));
+  document.getElementById('footer-info').textContent = STEP_LABELS[state.step];
+  document.getElementById('btn-back').disabled = state.step === 0;
+  document.getElementById('btn-next').disabled = !canAdvance();
+  document.getElementById('footer-bar').classList.remove('hidden');
+}
+
+function canAdvance() {
+  if (state.step === 0) return !!state.gpu;
+  if (state.step === 1) return state.gamePath.length > 2;
+  if (state.step === 2) return state.scanPassed;
+  if (state.step === 3) return true;
+  return false;
+}
+
+function goNext() {
+  if (state.step < state.totalSteps - 1 && canAdvance()) {
+    state.step++;
+    updateNav();
+    if (state.step === 3) applyGpuDefaults();
+  }
+}
+
+function goBack() {
+  if (state.step > 0) { state.step--; updateNav(); }
+}
+
+// ─── GPU selection ────────────────────────────────────────────────────────────
+document.querySelectorAll('.gpu-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.gpu-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.gpu = card.dataset.gpu;
+    state.gpuVendor = card.dataset.vendor;
+    document.getElementById('gpu-note-text').innerHTML = GPU_NOTES[state.gpu] || '';
+    document.getElementById('gpu-selection-note').style.display = 'block';
+    document.getElementById('btn-next').disabled = false;
+  });
+});
+
+// ─── Path input ───────────────────────────────────────────────────────────────
+document.getElementById('game-path-input').addEventListener('input', e => {
+  state.gamePath = e.target.value.trim();
+  document.getElementById('btn-next').disabled = state.gamePath.length < 2;
+});
+
+async function browseFolder() {
+  const p = window.electronAPI ? await window.electronAPI.selectFolder() : prompt('Enter game directory:');
+  if (p) {
+    document.getElementById('game-path-input').value = p;
+    state.gamePath = p;
+    document.getElementById('btn-next').disabled = false;
+  }
+}
+
+// ─── Scan ─────────────────────────────────────────────────────────────────────
+const KNOWN_FILES = {
+  // Standard DLSS / Streamline
+  'nvngx_dlss.dll':                      { label: 'DLSS Upscaler',          api: 'dx12/dx11', trigger: true  },
+  'nvngx_dlssd.dll':                     { label: 'DLSS Ray Reconstruction', api: 'dx12',      trigger: false },
+  'nvngx_dlssg.dll':                     { label: 'DLSS Frame Gen',          api: 'dx12',      trigger: false },
+  'sl.dlss.dll':                         { label: 'DLSS via Streamline',     api: 'dx12',      trigger: true  },
+  'sl.interposer.dll':                   { label: 'Streamline Interposer',   api: 'dx12',      trigger: true  },
+  // XeSS
+  'libxess.dll':                         { label: 'Intel XeSS',              api: 'dx12',      trigger: true  },
+  'libxess_dx11.dll':                    { label: 'Intel XeSS (DX11)',       api: 'dx11',      trigger: false },
+  // FSR — standard names
+  'amd_fidelityfx_dx12.dll':             { label: 'AMD FSR (DX12)',          api: 'dx12',      trigger: true  },
+  'amd_fidelityfx_vk.dll':              { label: 'AMD FSR (Vulkan)',         api: 'vulkan',    trigger: true  },
+  // FSR — alternate names (Clair Obscur, Space Marine 2, etc.)
+  'amd_fidelityfx_upscaler_dx12.dll':    { label: 'FSR Upscaler (alternate)', api: 'dx12',    trigger: true  },
+  'amd_fidelityfx_framegeneration_dx12.dll': { label: 'FSR Frame Gen (alternate)', api: 'dx12', trigger: true },
+  'ffx_fsr2_api_dx12_x64.dll':           { label: 'FSR2 API (DX12)',         api: 'dx12',      trigger: true  },
+  'ffx_fsr2_api_vk_x64.dll':             { label: 'FSR2 API (Vulkan)',       api: 'vulkan',    trigger: true  },
+  'ffx_fsr3upscaler_x64.dll':            { label: 'FSR3 Upscaler',          api: 'dx12',      trigger: true  },
+  'ffx_framegeneration_x64.dll':         { label: 'FSR Frame Gen',           api: 'dx12',      trigger: true  },
+  // Hook targets
+  'dxgi.dll':                            { label: 'DXGI Layer',              api: 'dx12/dx11', trigger: false },
+  'd3d12.dll':                           { label: 'D3D12 Layer',             api: 'dx12',      trigger: false },
+  'dsound.dll':                          { label: 'DSound hook',             api: 'dx11',      trigger: false },
+  // Linux
+  'nvngx_dlss.so':                       { label: 'DLSS (Linux)',            api: 'linux',     trigger: true  },
+  'libxess.so':                          { label: 'XeSS (Linux)',            api: 'linux',     trigger: true  },
+};
+
+function addLog(containerId, msg, type = 'info') {
+  const log = document.getElementById(containerId);
+  const time = new Date().toLocaleTimeString('en', { hour12: false });
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${time}</span><span class="log-${type}">${msg}</span>`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function runScan() {
+  const log = document.getElementById('scan-log');
+  log.innerHTML = '';
+  log.style.display = 'block';
+  document.getElementById('scan-progress').style.display = 'block';
+  document.getElementById('scan-results').style.display = 'none';
+  document.getElementById('scan-btn').disabled = true;
+
+  const bar = document.getElementById('scan-progress-bar');
+  const prog = p => { bar.style.width = p + '%'; };
+
+  addLog('scan-log', `Scanning: ${state.gamePath}`, 'info');
+  prog(10);
+
+  let found = {}, exeFound = false;
+  state.existingInstall = null;
+
+  if (window.electronAPI) {
+    try {
+      const res = await window.electronAPI.scanDirectory(state.gamePath);
+      found = res.found;
+      exeFound = res.exeFound;
+      state.existingInstall = res.existingInstall;
+    } catch (e) {
+      addLog('scan-log', 'Scan error: ' + e.message, 'err');
+      document.getElementById('scan-btn').disabled = false;
+      return;
+    }
+  } else {
+    await sleep(400);
+    addLog('scan-log', 'Demo mode — simulating scan results', 'warn');
+    found = {
+      'nvngx_dlss.dll': state.gamePath + '\\nvngx_dlss.dll',
+      'amd_fidelityfx_upscaler_dx12.dll': state.gamePath + '\\amd_fidelityfx_upscaler_dx12.dll',
+      'amd_fidelityfx_framegeneration_dx12.dll': state.gamePath + '\\amd_fidelityfx_framegeneration_dx12.dll',
+    };
+    exeFound = true;
+  }
+
+  prog(55);
+  addLog('scan-log', `Executable found: ${exeFound ? 'yes' : 'no'}`, exeFound ? 'ok' : 'warn');
+
+  const foundKeys = Object.keys(found);
+  const upscalerHits = foundKeys.filter(f => KNOWN_FILES[f]?.trigger);
+
+  for (const f of foundKeys) {
+    addLog('scan-log', `Found: ${f}`, 'ok');
+    prog(55 + (foundKeys.indexOf(f) / Math.max(foundKeys.length, 1)) * 38);
+    await sleep(50);
+  }
+
+  prog(100); await sleep(100);
+
+  state.scanResults = found;
+  state.scanPassed = exeFound && upscalerHits.length > 0;
+
+  // Existing install notice
+  const notice = document.getElementById('existing-install-notice');
+  if (state.existingInstall) {
+    notice.innerHTML = `<strong>Previous OptiScaler install detected</strong> (${state.existingInstall.version}, installed ${new Date(state.existingInstall.installedAt).toLocaleDateString()}). Installing again will overwrite it — backed-up files are kept and the backup will be updated.`;
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+
+  // Result cards — show only found + all triggers
+  const cards = document.getElementById('result-cards');
+  cards.innerHTML = '';
+  for (const [file, meta] of Object.entries(KNOWN_FILES)) {
+    const isFound = !!found[file];
+    if (!isFound && !meta.trigger) continue; // hide non-trigger missing files to reduce noise
+    const card = document.createElement('div');
+    card.className = `result-card ${isFound ? 'found' : 'missing'}`;
+    card.innerHTML = `
+      <div class="result-tag">${isFound ? 'FOUND' : 'NOT FOUND'}</div>
+      <div class="result-file">${file}</div>
+      <div class="result-sub">${isFound ? found[file] : meta.label + ' · ' + meta.api}</div>
+    `;
+    cards.appendChild(card);
+  }
+
+  const badge = document.getElementById('scan-status-badge');
+  if (state.scanPassed) {
+    badge.innerHTML = `<div class="status-badge ok"><div class="status-dot"></div>Compatible — ${upscalerHits.length} upscaler entry point(s) found</div>`;
+    addLog('scan-log', `${upscalerHits.length} upscaler hook(s) found. Ready to install.`, 'ok');
+  } else if (!exeFound) {
+    badge.innerHTML = `<div class="status-badge fail"><div class="status-dot"></div>No game executable found in this directory</div>`;
+    addLog('scan-log', 'No .exe found. Check the directory and try again.', 'err');
+  } else {
+    badge.innerHTML = `<div class="status-badge warn"><div class="status-dot"></div>No upscaler DLLs found — OptiScaler may not work</div>`;
+    addLog('scan-log', 'No known upscaler DLLs found. Game may not support DLSS/XeSS/FSR.', 'warn');
+  }
+
+  const infoBox = document.getElementById('scan-info-box');
+  if (!state.scanPassed) {
+    infoBox.innerHTML = `<strong>OptiScaler requires a game that already ships DLSS 2+, XeSS, or FSR 2+.</strong> Without an upscaler entry point it cannot inject its pipeline. Check the <a href="https://github.com/optiscaler/OptiScaler/wiki" style="color:var(--accent)">OptiScaler wiki</a> for game-specific workarounds.`;
+    infoBox.style.display = 'block';
+  } else { infoBox.style.display = 'none'; }
+
+  document.getElementById('scan-results').style.display = 'block';
+  document.getElementById('scan-btn').disabled = false;
+  document.getElementById('btn-next').disabled = !state.scanPassed;
+}
+
+// ─── Options defaults ─────────────────────────────────────────────────────────
+function applyGpuDefaults() {
+  const v = state.gpuVendor;
+  document.getElementById('opt-dxgi').checked = v !== 'nvidia' || state.gpu === 'nvidia-gtx';
+  document.getElementById('opt-fakenvapi').checked = v === 'amd';
+  document.getElementById('opt-vulkan').checked = false;
+  document.getElementById('opt-nukem').checked = false;
+  document.getElementById('opt-ini').checked = true;
+}
+
+// ─── Shortcut key picker ──────────────────────────────────────────────────────
+function selectKey(btn) {
+  document.querySelectorAll('.key-btn').forEach(b => b.classList.remove('active-key'));
+  btn.classList.add('active-key');
+  state.shortcutKey = btn.dataset.key;
+  stopCapture();
+}
+
+let capturingKey = false;
+
+function startCapture() {
+  if (capturingKey) { stopCapture(); return; }
+  capturingKey = true;
+  document.getElementById('btn-capture').textContent = 'Cancel';
+  document.getElementById('capture-hint').style.display = 'block';
+  document.addEventListener('keydown', captureKeyHandler, { once: true });
+}
+
+function captureKeyHandler(e) {
+  e.preventDefault();
+  if (['Shift','Control','Alt','Meta','CapsLock','Tab','Escape'].includes(e.key)) {
+    document.addEventListener('keydown', captureKeyHandler, { once: true });
+    return;
+  }
+  const keyMap = {
+    'Insert':'INSERT','Home':'HOME','End':'END','Delete':'DELETE',
+    'PageUp':'PRIOR','PageDown':'NEXT','Pause':'PAUSE',
+    'F1':'F1','F2':'F2','F3':'F3','F4':'F4','F5':'F5','F6':'F6',
+    'F7':'F7','F8':'F8','F9':'F9','F10':'F10','F11':'F11','F12':'F12',
+  };
+  const mapped = keyMap[e.key] || e.key.toUpperCase();
+  state.shortcutKey = mapped;
+
+  document.querySelectorAll('.key-btn[data-key]').forEach(b => b.classList.remove('active-key'));
+  const captureBtn = document.getElementById('btn-capture');
+  captureBtn.textContent = mapped;
+  captureBtn.dataset.key = mapped;
+  captureBtn.classList.add('active-key');
+  stopCapture();
+}
+
+function stopCapture() {
+  capturingKey = false;
+  document.removeEventListener('keydown', captureKeyHandler);
+  const btn = document.getElementById('btn-capture');
+  if (!btn.classList.contains('active-key')) btn.textContent = 'Press a key…';
+  document.getElementById('capture-hint').style.display = 'none';
+}
+
+// ─── Install ──────────────────────────────────────────────────────────────────
+async function runInstall() {
+  document.getElementById('install-btn').disabled = true;
+  const log = document.getElementById('install-log');
+  log.innerHTML = ''; log.style.display = 'block';
+
+  const bar = document.getElementById('install-progress-bar');
+  const prog = p => { bar.style.width = p + '%'; };
+
+  const opts = {
+    dxgi:        document.getElementById('opt-dxgi').checked,
+    fakenvapi:   document.getElementById('opt-fakenvapi').checked,
+    vulkan:      document.getElementById('opt-vulkan').checked,
+    nukem:       document.getElementById('opt-nukem').checked,
+    ini:         document.getElementById('opt-ini').checked,
+    version:     document.getElementById('version-select').value,
+    shortcutKey: state.shortcutKey,
+    gpu:         state.gpu, gpuVendor: state.gpuVendor,
+    gamePath:    state.gamePath, scanResults: state.scanResults,
+  };
+
+  if (!window.electronAPI) {
+    const demoFiles = [opts.dxgi?'dxgi.dll':'winmm.dll','amd_fidelityfx_dx12.dll','libxess.dll'];
+    if (opts.fakenvapi) demoFiles.push('nvapi64.dll');
+    if (opts.nukem)     demoFiles.push('dlssg_to_fsr3.dll');
+    if (opts.ini)       demoFiles.push('OptiScaler.ini');
+    addLog('install-log','Demo mode: simulating backup + install...','warn');
+    prog(10);
+    for (let i = 0; i < demoFiles.length; i++) {
+      await sleep(300);
+      if (i < 2) addLog('install-log', `Backed up: ${demoFiles[i]}`, 'info');
+      addLog('install-log', `Installed: ${demoFiles[i]}`, 'ok');
+      prog(10 + Math.round(((i+1)/demoFiles.length)*85));
+    }
+    showInstallResult(true, '', demoFiles);
+    return;
+  }
+
+  window.electronAPI.onInstallLog(({ msg, type }) => addLog('install-log', msg, type));
+  window.electronAPI.onInstallProgress(pct => prog(pct));
+
+  addLog('install-log', 'Fetching release info from GitHub...', 'info');
+  prog(5);
+
+  let releaseInfo;
+  try {
+    releaseInfo = await window.electronAPI.fetchRelease(opts.version);
+  } catch (e) {
+    window.electronAPI.removeInstallListeners();
+    showInstallResult(false, 'Could not reach GitHub API.\n\n' + e.message);
+    return;
+  }
+
+  addLog('install-log', `Release: ${releaseInfo.version}`, 'ok');
+
+  let result;
+  try {
+    result = await window.electronAPI.install(opts, releaseInfo);
+  } catch (e) {
+    window.electronAPI.removeInstallListeners();
+    showInstallResult(false, e.message, []);
+    return;
+  }
+
+  window.electronAPI.removeInstallListeners();
+  result.success ? showInstallResult(true, '', result.files) : showInstallResult(false, result.error, []);
+}
+
+function showInstallResult(success, error, files = []) {
+  document.getElementById('install-running').style.display = 'none';
+  document.getElementById('install-result').style.display = 'block';
+  document.getElementById('footer-bar').classList.add('hidden');
+  document.getElementById('install-desc').style.display = 'none';
+
+  const keyName = state.shortcutKey || 'INSERT';
+
+  if (success) {
+    document.getElementById('install-result').innerHTML = `
+      <div class="install-result">
+        <div class="result-icon" style="color:var(--success)">✓</div>
+        <div class="result-title" style="color:var(--success)">Installation complete</div>
+        <p class="result-detail">
+          Files are backed up in <code style="font-family:var(--mono);color:var(--accent)">.optiscaler_backup/</code> inside the game folder.<br>
+          Launch the game and press <strong>${keyName}</strong> to open the overlay.
+          If it doesn't appear, try <strong>Alt + ${keyName}</strong>.
+        </p>
+        <div class="copied-files">
+          ${files.map(f=>`<div class="log-line"><span class="log-ok">✓</span>&nbsp;<span>${f}</span></div>`).join('')}
+        </div>
+        <div class="info-box danger-box" style="max-width:540px;margin:0 auto 20px;text-align:left">
+          <strong>Important:</strong> Do not use OptiScaler with online/multiplayer games — DLL injection and GPU spoofing can trigger anti-cheat.
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn" onclick="resetAll()">Install another game</button>
+          <button class="btn" onclick="switchTab('uninstall')">Go to Uninstall</button>
+        </div>
+      </div>
+    `;
+  } else {
+    document.getElementById('install-result').innerHTML = `
+      <div class="install-result">
+        <div class="result-icon" style="color:var(--error)">✗</div>
+        <div class="result-title" style="color:var(--error)">Installation failed</div>
+        <p class="result-detail" style="white-space:pre-wrap">${error || 'An unexpected error occurred.'}</p>
+        <button class="btn btn-primary" onclick="retryInstall()">Retry</button>
+      </div>
+    `;
+  }
+}
+
+function retryInstall() {
+  document.getElementById('install-result').style.display = 'none';
+  document.getElementById('install-result').innerHTML = '';
+  document.getElementById('install-running').style.display = 'block';
+  document.getElementById('install-log').innerHTML = '';
+  document.getElementById('install-progress-bar').style.width = '0%';
+  document.getElementById('install-btn').disabled = false;
+  document.getElementById('install-desc').style.display = '';
+  document.getElementById('footer-bar').classList.remove('hidden');
+}
+
+function resetAll() {
+  state.step = 0;
+  state.gpu = state.gpuVendor = null;
+  state.gamePath = '';
+  state.scanResults = null;
+  state.scanPassed = false;
+  state.existingInstall = null;
+  state.shortcutKey = 'INSERT';
+
+  document.querySelectorAll('.gpu-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('gpu-selection-note').style.display = 'none';
+  document.getElementById('game-path-input').value = '';
+  ['scan-log','install-log'].forEach(id => { const el=document.getElementById(id); el.innerHTML=''; el.style.display='none'; });
+  document.getElementById('scan-results').style.display = 'none';
+  document.getElementById('scan-progress').style.display = 'none';
+  document.getElementById('install-result').style.display = 'none';
+  document.getElementById('install-result').innerHTML = '';
+  document.getElementById('install-running').style.display = 'block';
+  document.getElementById('install-btn').disabled = false;
+  document.getElementById('install-progress-bar').style.width = '0%';
+  document.getElementById('install-desc').style.display = '';
+  document.querySelectorAll('.key-btn').forEach(b => b.classList.remove('active-key'));
+  document.querySelector('.key-btn[data-key="INSERT"]').classList.add('active-key');
+  document.getElementById('btn-capture').textContent = 'Press a key…';
+  stopCapture();
+  updateNav();
+}
+
+// ─── Uninstall ────────────────────────────────────────────────────────────────
+async function browseUninstallFolder() {
+  const p = window.electronAPI ? await window.electronAPI.selectFolder() : prompt('Game directory:');
+  if (p) {
+    document.getElementById('uninstall-path-input').value = p;
+    await checkInstall();
+  }
+}
+
+async function checkInstall() {
+  const dir = document.getElementById('uninstall-path-input').value.trim();
+  if (!dir) return;
+
+  const area = document.getElementById('uninstall-manifest-area');
+  area.style.display = 'block';
+
+  let manifest = null;
+  if (window.electronAPI) {
+    manifest = await window.electronAPI.checkInstall(dir);
+  } else {
+    // Demo
+    manifest = {
+      version: 'v0.9.0',
+      installedAt: new Date().toISOString(),
+      gpu: 'amd-rdna3',
+      hookDll: 'dxgi.dll',
+      files: [
+        { dest: 'dxgi.dll',                    backedUp: false, backupPath: null },
+        { dest: 'amd_fidelityfx_dx12.dll',     backedUp: true,  backupPath: 'backup/amd...' },
+        { dest: 'amd_fidelityfx_vk.dll',       backedUp: false, backupPath: null },
+        { dest: 'libxess.dll',                  backedUp: false, backupPath: null },
+        { dest: 'OptiScaler.ini',               backedUp: false, backupPath: null },
+      ],
+    };
+  }
+
+  document.getElementById('no-manifest-msg').style.display    = manifest ? 'none' : 'block';
+  document.getElementById('manifest-found-area').style.display = manifest ? 'block' : 'none';
+
+  if (!manifest) return;
+
+  document.getElementById('manifest-info').innerHTML = `
+    <div class="manifest-row"><span class="manifest-label">Version</span><span class="manifest-value">${manifest.version}</span></div>
+    <div class="manifest-row"><span class="manifest-label">Installed</span><span class="manifest-value">${new Date(manifest.installedAt).toLocaleString()}</span></div>
+    <div class="manifest-row"><span class="manifest-label">GPU profile</span><span class="manifest-value">${manifest.gpu}</span></div>
+    <div class="manifest-row"><span class="manifest-label">Hook DLL</span><span class="manifest-value">${manifest.hookDll}</span></div>
+  `;
+
+  const fileList = document.getElementById('uninstall-file-list');
+  fileList.innerHTML = manifest.files.map(f => `
+    <div class="file-list-item">
+      <span class="file-badge ${f.backedUp ? 'badge-backed' : 'badge-new'}">${f.backedUp ? 'RESTORE' : 'DELETE'}</span>
+      <span>${f.dest}</span>
+    </div>
+  `).join('');
+}
+
+async function runUninstall() {
+  const dir = document.getElementById('uninstall-path-input').value.trim();
+  document.getElementById('uninstall-btn').disabled = true;
+  document.getElementById('manifest-found-area').style.display = 'none';
+  document.getElementById('no-manifest-msg').style.display = 'none';
+
+  const progWrap = document.getElementById('uninstall-progress');
+  const progBar  = document.getElementById('uninstall-progress-bar');
+  const log      = document.getElementById('uninstall-log');
+  progWrap.style.display = 'block';
+  log.innerHTML = ''; log.style.display = 'block';
+  progBar.style.width = '10%';
+
+  if (window.electronAPI) {
+    window.electronAPI.onUninstallLog(({ msg, type }) => addLog('uninstall-log', msg, type));
+  }
+
+  let result;
+  if (window.electronAPI) {
+    result = await window.electronAPI.uninstall(dir);
+    window.electronAPI.removeUninstallListeners();
+  } else {
+    await sleep(800);
+    result = { success: true, restored: ['amd_fidelityfx_dx12.dll'], removed: ['dxgi.dll','libxess.dll','OptiScaler.ini'], installedVersion: 'v0.9.0 (demo)' };
+  }
+
+  progBar.style.width = '100%';
+  await sleep(200);
+
+  const resultEl = document.getElementById('uninstall-result');
+  resultEl.style.display = 'block';
+
+  if (result.success) {
+    resultEl.innerHTML = `
+      <div class="install-result">
+        <div class="result-icon" style="color:var(--success)">✓</div>
+        <div class="result-title">Uninstall complete</div>
+        <p class="result-detail">
+          OptiScaler ${result.installedVersion} has been removed.<br>
+          ${result.restored.length} file(s) restored from backup. ${result.removed.length} file(s) deleted.
+        </p>
+        <button class="btn" onclick="resetUninstallUI()">Check another game</button>
+      </div>
+    `;
+  } else {
+    resultEl.innerHTML = `
+      <div class="install-result">
+        <div class="result-icon" style="color:var(--error)">✗</div>
+        <div class="result-title" style="color:var(--error)">Uninstall failed</div>
+        <p class="result-detail" style="white-space:pre-wrap">${result.error}</p>
+        <button class="btn btn-primary" onclick="resetUninstallUI()">Try again</button>
+      </div>
+    `;
+  }
+}
+
+function resetUninstallUI() {
+  document.getElementById('uninstall-path-input').value = '';
+  document.getElementById('uninstall-manifest-area').style.display = 'none';
+  document.getElementById('uninstall-progress').style.display = 'none';
+  document.getElementById('uninstall-progress-bar').style.width = '0%';
+  document.getElementById('uninstall-log').innerHTML = '';
+  document.getElementById('uninstall-log').style.display = 'none';
+  document.getElementById('uninstall-result').style.display = 'none';
+  document.getElementById('uninstall-result').innerHTML = '';
+  document.getElementById('uninstall-btn').disabled = false;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+updateNav();
+</script>
+</body>
+</html>

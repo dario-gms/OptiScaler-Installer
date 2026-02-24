@@ -1,0 +1,71 @@
+{
+  "name": "optiscaler-installer",
+  "version": "1.0.0",
+  "description": "Cross-platform GUI installer for OptiScaler",
+  "main": "main.js",
+  "license": "MIT",
+  "author": "optiscaler-installer contributors",
+  "homepage": "https://github.com/YOUR_USERNAME/optiscaler-installer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/optiscaler-installer"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:linux": "electron-builder --linux --x64",
+    "build:all": "electron-builder --win --linux --x64",
+    "dist": "npm run build:all",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "io.github.optiscaler.installer",
+    "productName": "OptiScaler Installer",
+    "copyright": "MIT License",
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
+    }
+  }
+}
