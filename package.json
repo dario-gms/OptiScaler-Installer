@@ -12,9 +12,9 @@
   },
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win --x64",
-    "build:linux": "electron-builder --linux --x64",
-    "build:all": "electron-builder --win --linux --x64",
+    "build:win": "electron-builder --win --x64 --publish never",
+    "build:linux": "electron-builder --linux --x64 --publish never",
+    "build:all": "electron-builder --win --linux --x64 --publish never",
     "dist": "npm run build:all",
     "pack": "electron-builder --dir"
   },
@@ -26,7 +26,6 @@
     "appId": "io.github.optiscaler.installer",
     "productName": "OptiScaler Installer",
     "copyright": "MIT License",
-    "publish": "never",
     "files": [
       "index.html",
       "main.js",
