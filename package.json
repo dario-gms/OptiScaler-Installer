@@ -4,11 +4,11 @@
   "description": "Cross-platform GUI installer for OptiScaler",
   "main": "main.js",
   "license": "MIT",
-  "author": "optiscaler-installer contributors",
-  "homepage": "https://github.com/YOUR_USERNAME/optiscaler-installer",
+  "author": "dario-gms <86432208+dario-gms@users.noreply.github.com>",
+  "homepage": "https://github.com/dario-gms/optiscaler-installer",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/optiscaler-installer"
+    "url": "https://github.com/dario-gms/optiscaler-installer"
   },
   "scripts": {
     "start": "electron .",
@@ -66,6 +66,11 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "dario-gms",
+      "repo": "optiscaler-installer"
     }
   }
 }
