@@ -66,11 +66,6 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "dario-gms",
-      "repo": "optiscaler-installer"
     }
   }
 }
