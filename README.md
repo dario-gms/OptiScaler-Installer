@@ -206,10 +206,3 @@ If neither condition is met, the installer blocks progression and shows an expla
 MIT. See `LICENSE`.
 
 This project is not affiliated with the OptiScaler team. It is a community-made installer that fetches OptiScaler directly from the [official GitHub releases](https://github.com/optiscaler/OptiScaler/releases).
-
-### v1.2.0
-- **Automatic backup before overwrite** — Before replacing any file, the installer copies the original to `.optiscaler_backup/` inside the game folder. A `optiscaler_manifest.json` records exactly what was installed and what was backed up.
-- **Uninstall / Restore tab** — New top-level tab. Point it at the game directory, click Check, and it reads the manifest to show you exactly what will be restored vs deleted. Click Uninstall & Restore to undo everything the installer did.
-- **Expanded scan targets** — Scanner now detects alternate FSR naming conventions used by games like Clair Obscur (`amd_fidelityfx_upscaler_dx12.dll`, `amd_fidelityfx_framegeneration_dx12.dll`) and legacy FSR2/FSR3 API DLL names (`ffx_fsr2_api_dx12_x64.dll`, `ffx_fsr3upscaler_x64.dll`, `ffx_framegeneration_x64.dll`, `sl.interposer.dll`).
-- Scan results now filter out non-trigger "not found" entries to reduce noise — only relevant missing files are shown.
-- After a successful install, a shortcut button to "Go to Uninstall" is shown on the completion screen.
