@@ -41,8 +41,8 @@ On Windows, `Expand-Archive` (PowerShell built-in) is used instead.
 ### Install dependencies
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/optiscaler-installer
-cd optiscaler-installer
+git clone https://github.com/dario-gms/OptiScaler-Installer
+cd OptiScaler-Installer
 npm install
 ```
 
@@ -80,19 +80,36 @@ Produces:
 - `dist/OptiScaler Installer-1.0.0.AppImage` — portable, runs on any x64 distro
 - `dist/optiscaler-installer_1.0.0_amd64.deb` — Debian/Ubuntu package
 
-### Both at once (cross-compilation via Wine/Docker)
+### Both at once
 
 ```bash
 npm run build:all
 ```
 
-Cross-compiling Windows targets from Linux requires Wine or a CI runner with a Windows agent. See [electron-builder cross-platform docs](https://www.electron.build/multi-platform-build.html).
-
 ---
 
-## Setting up GitHub Actions for automated releases
+## Automated releases with GitHub Actions
 
-Create `.github/workflows/release.yml`:
+This project uses GitHub Actions to automatically build and create releases.
+
+### Workflow overview
+
+The workflow (`.github/workflows/build.yml`) is triggered on every tag push matching `v*`:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+**What happens automatically:**
+1. ✅ Windows build runs on `windows-latest`
+2. ✅ Linux build runs on `ubuntu-latest`
+3. ✅ Both builds upload their artifacts
+4. ✅ Release is created with all files attached (`.exe`, `.AppImage`, `.deb`, etc.)
+
+### Workflow file
+
+`.github/workflows/build.yml` configuration:
 
 ```yaml
 name: Build and Release
@@ -103,59 +120,40 @@ on:
       - 'v*'
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm run build:win
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-dist
-          path: dist/*.exe
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    # ... build steps ...
 
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm run build:linux
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-dist
-          path: |
-            dist/*.AppImage
-            dist/*.deb
-
-  publish:
-    needs: [build-windows, build-linux]
+  release:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts
-          merge-multiple: true
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: release-artifacts/**/*
+    # ... release steps with skip_existing: true ...
 ```
 
-To trigger a release:
+**Key points:**
+- Builds run in **parallel** for Windows and Linux
+- Release job **waits for both builds** to complete
+- `skip_existing: true` prevents errors if re-running the workflow
+
+### Creating a release
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+# 1. Commit your changes
+git add .
+git commit -m "your message"
+git push
+
+# 2. Create and push a tag
+git tag v1.0.2
+git push origin v1.0.2
 ```
 
-GitHub Actions builds both targets and creates a release with all artifacts attached automatically.
+That's it! GitHub Actions will build and release automatically. Check the **Actions** tab to monitor progress.
 
 ---
 
@@ -172,7 +170,7 @@ optiscaler-installer/
 │   └── icon.png     # Linux icon (512x512 recommended)
 └── .github/
     └── workflows/
-        └── release.yml
+        └── build.yml
 ```
 
 The UI has no external CSS or JS dependencies — intentional. Keeping it self-contained means no bundler, no node_modules leaking into the renderer, and a faster iteration loop.
