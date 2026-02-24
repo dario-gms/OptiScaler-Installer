@@ -21,33 +21,31 @@ jobs:
           node-version: '18'
       
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       
-      - name: Build (Windows)
+      - name: Build Windows
         if: runner.os == 'Windows'
         run: npm run build:win
       
-      - name: Build (Linux)
+      - name: Build Linux
         if: runner.os == 'Linux'
         run: npm run build:linux
       
-      - name: Upload artifacts (Windows)
+      - name: Upload Windows artifacts
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifacts
-          path: |
-            dist/OptiScaler*.exe
-            dist/*.blockmap
+          path: dist/
+          retention-days: 1
       
-      - name: Upload artifacts (Linux)
+      - name: Upload Linux artifacts
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: linux-artifacts
-          path: |
-            dist/OptiScaler*.AppImage
-            dist/*.deb
+          path: dist/
+          retention-days: 1
   
   release:
     needs: build
@@ -62,12 +60,15 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: all-artifacts
+          path: release-artifacts
+      
+      - name: List artifacts (debug)
+        run: find release-artifacts -type f -exec ls -lh {} \;
       
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: all-artifacts/**/*.{exe,AppImage,deb,blockmap}
+          files: release-artifacts/**/*
           skip_existing: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
