@@ -19,6 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
       
       - name: Install dependencies
         run: npm ci
@@ -69,10 +70,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release-artifacts/**/*.exe
-            release-artifacts/**/*.exe.blockmap
-            release-artifacts/**/*.AppImage
-            release-artifacts/**/*.deb
+            release-artifacts/**/OptiScaler.Installer.Setup.*.exe
+            release-artifacts/**/optiscaler-installer_*_amd64.deb
+            release-artifacts/**/OptiScaler.Installer-*.AppImage
           skip_existing: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
