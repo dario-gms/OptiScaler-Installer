@@ -82,30 +82,50 @@ const UPSCALER_TRIGGERS = new Set([
 ]);
 
 const EXE_EXTENSIONS = new Set(['.exe', '.sh', '.AppImage']);
-const INTERESTING_SUBDIRS = new Set(['bin', 'binaries', 'win64', 'win32', 'wingdk', 'x64', 'game', 'engine', 'shipping']);
+
+// Directories that are clearly not game directories — skip to avoid slow scans
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', '__pycache__', 'cache', 'shadercache', 'shader_cache',
+  'logs', 'log', 'crashes', 'crash', 'screenshots', 'screenshots', 'saves',
+  'savegames', 'photos', 'videos', 'redist', 'redistributables', 'vcredist',
+  'directx', '_commonredist', 'support', 'tools',
+]);
+
+// EXE names that are launchers / helpers, not the actual game
+const LAUNCHER_EXE_FRAGMENTS = [
+  'launcher', 'setup', 'install', 'uninstall', 'crash', 'report',
+  'helper', 'updater', 'update', 'prereq', 'prerequisite', 'uplay',
+  'eac', 'anticheat', 'easyanticheat', 'battleye', 'steam', 'galaxy',
+];
+
+function isLauncherExe(lower) {
+  return LAUNCHER_EXE_FRAGMENTS.some(frag => lower.includes(frag));
+}
 
 function scanDir(dirPath, depth = 0) {
-  const found = {};
-  let exeFound = false;
+  const found   = {};     // upscaler DLLs: name -> fullPath
+  const exeDirs = [];     // directories where a game EXE was found
 
-  if (depth > 3) return { found, exeFound };
+  if (depth > 4) return { found, exeDirs };
 
   let entries;
   try {
     entries = fs.readdirSync(dirPath, { withFileTypes: true });
   } catch {
-    return { found, exeFound };
+    return { found, exeDirs };
   }
+
+  let hasGameExeHere = false;
 
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
-    const lower = entry.name.toLowerCase();
+    const lower    = entry.name.toLowerCase();
 
     if (entry.isDirectory()) {
-      if (INTERESTING_SUBDIRS.has(lower)) {
+      if (!SKIP_DIRS.has(lower)) {
         const sub = scanDir(fullPath, depth + 1);
         Object.assign(found, sub.found);
-        exeFound = exeFound || sub.exeFound;
+        exeDirs.push(...sub.exeDirs);
       }
       continue;
     }
@@ -113,39 +133,96 @@ function scanDir(dirPath, depth = 0) {
     if (!entry.isFile()) continue;
 
     const ext = path.extname(lower);
-    if (EXE_EXTENSIONS.has(ext)) exeFound = true;
+    if (EXE_EXTENSIONS.has(ext) && !isLauncherExe(lower)) hasGameExeHere = true;
 
     if (HOOK_TARGETS.includes(lower)) found[lower] = fullPath;
   }
 
-  return { found, exeFound };
+  if (hasGameExeHere) exeDirs.push(dirPath);
+
+  return { found, exeDirs };
+}
+
+/**
+ * Choose the best directory to install OptiScaler into.
+ * Priority:
+ *   1. A directory that contains both a game EXE and an upscaler DLL (ideal).
+ *   2. A directory that contains a game EXE and whose parent has upscaler DLLs.
+ *   3. Any directory with a game EXE (shallowest non-root wins for typical UE structure).
+ *   4. Fall back to the root the user picked.
+ */
+function findInstallPath(rootDir, exeDirs, found) {
+  if (exeDirs.length === 0) return rootDir;
+
+  const upscalerDirs = new Set(Object.values(found).map(p => path.dirname(p)));
+
+  // 1. EXE dir that also has upscaler DLL(s)
+  for (const d of exeDirs) {
+    if (upscalerDirs.has(d)) return d;
+  }
+
+  // 2. EXE dir whose parent or grandparent contains upscaler DLL(s)
+  for (const d of exeDirs) {
+    if (upscalerDirs.has(path.dirname(d)) || upscalerDirs.has(path.dirname(path.dirname(d)))) return d;
+  }
+
+  // 3. Shallowest EXE dir that is NOT the user-picked root (avoids root-level launcher.exe)
+  const nonRoot = exeDirs.filter(d => d !== rootDir);
+  if (nonRoot.length > 0) {
+    nonRoot.sort((a, b) => a.length - b.length);
+    return nonRoot[0];
+  }
+
+  return exeDirs[0];
 }
 
 ipcMain.handle('scan-directory', async (_event, dirPath) => {
   if (!fs.existsSync(dirPath)) throw new Error(`Path does not exist: ${dirPath}`);
 
   const result = scanDir(dirPath);
+  const exeFound = result.exeDirs.length > 0;
+  const installPath = findInstallPath(dirPath, result.exeDirs, result.found);
 
-  // Check if a previous OptiScaler install exists in this directory
-  const manifestPath = path.join(dirPath, MANIFEST_NAME);
+  // Check if a previous OptiScaler install exists (check both root and install path)
   let existingInstall = null;
-  if (fs.existsSync(manifestPath)) {
-    try {
-      existingInstall = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    } catch {
-      existingInstall = null;
+  for (const checkDir of new Set([dirPath, installPath])) {
+    const manifestPath = path.join(checkDir, MANIFEST_NAME);
+    if (fs.existsSync(manifestPath)) {
+      try { existingInstall = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); break; } catch { }
     }
   }
 
-  return { ...result, existingInstall };
+  return { found: result.found, exeFound, installPath, existingInstall };
 });
+
+// ─── Helper: find manifest recursively (same skip rules as scanDir) ──────────
+function findManifest(dirPath, depth = 0) {
+  if (depth > 4) return null;
+
+  const candidate = path.join(dirPath, MANIFEST_NAME);
+  if (fs.existsSync(candidate)) return candidate;
+
+  let entries;
+  try { entries = fs.readdirSync(dirPath, { withFileTypes: true }); }
+  catch { return null; }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (SKIP_DIRS.has(entry.name.toLowerCase())) continue;
+    const found = findManifest(path.join(dirPath, entry.name), depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
 
 // ─── IPC: check if backup exists (for uninstall tab) ─────────────────────────
 ipcMain.handle('check-install', async (_event, dirPath) => {
-  const manifestPath = path.join(dirPath, MANIFEST_NAME);
-  if (!fs.existsSync(manifestPath)) return null;
+  const manifestPath = findManifest(dirPath);
+  if (!manifestPath) return null;
   try {
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    manifest._installDir = path.dirname(manifestPath);
+    return manifest;
   } catch {
     return null;
   }
@@ -225,7 +302,7 @@ ipcMain.handle('install', async (_event, opts, releaseInfo) => {
     send('Extraction complete.', 'ok');
     progress(55);
 
-    const dest = opts.gamePath;
+    const dest = opts.installPath || opts.gamePath;
     const backupDir = path.join(dest, BACKUP_DIR_NAME);
     fs.mkdirSync(backupDir, { recursive: true });
 
@@ -339,9 +416,14 @@ ipcMain.handle('install', async (_event, opts, releaseInfo) => {
 ipcMain.handle('uninstall', async (_event, dirPath) => {
   const send = (msg, type = 'info') => mainWindow.webContents.send('uninstall-log', { msg, type });
 
-  const manifestPath = path.join(dirPath, MANIFEST_NAME);
-  if (!fs.existsSync(manifestPath)) {
-    return { success: false, error: 'No OptiScaler installation manifest found in this directory.\nIs this the correct game folder?' };
+  const manifestPath = findManifest(dirPath);
+  if (!manifestPath) {
+    return { success: false, error: 'No OptiScaler installation manifest found in this folder or its subfolders.\nMake sure you selected the game\'s root installation folder.' };
+  }
+
+  const installDir = path.dirname(manifestPath);
+  if (installDir !== dirPath) {
+    send(`Found installation in: ${installDir}`, 'info');
   }
 
   let manifest;
@@ -351,12 +433,12 @@ ipcMain.handle('uninstall', async (_event, dirPath) => {
     return { success: false, error: 'Manifest file is corrupted and cannot be read.' };
   }
 
-  const backupDir = path.join(dirPath, BACKUP_DIR_NAME);
+  const backupDir = path.join(installDir, BACKUP_DIR_NAME);
   const removed = [];
   const restored = [];
 
   for (const entry of manifest.files) {
-    const destPath = path.join(dirPath, entry.dest);
+    const destPath = path.join(installDir, entry.dest);
 
     if (entry.backedUp && entry.backupPath && fs.existsSync(entry.backupPath)) {
       // Restore the original file from backup
@@ -497,7 +579,7 @@ function generateIni(opts) {
 
   let dx12Backend = 'xess', dx11Backend = 'fsr22';
   if      (opts.gpuVendor === 'nvidia') { dx12Backend = 'dlss'; dx11Backend = 'dlss'; }
-  else if (opts.gpuVendor === 'amd')    { dx12Backend = opts.gpu === 'amd-rdna4' ? 'fsr31' : 'fsr22'; }
+  else if (opts.gpuVendor === 'amd')    { dx12Backend = opts.gpu === 'amd-rdna4' ? 'fsr31' : 'fsr22'; dx11Backend = 'fsr22'; }
   else if (opts.gpuVendor === 'intel')  { dx12Backend = 'xess'; dx11Backend = 'xess'; }
 
   const keyToVK = {
