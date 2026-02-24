@@ -1,6 +1,6 @@
 {
   "name": "optiscaler-installer",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Cross-platform GUI installer for OptiScaler",
   "main": "main.js",
   "license": "MIT",

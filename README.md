@@ -1,208 +1,67 @@
 # OptiScaler Installer
 
-A cross-platform GUI for installing [OptiScaler](https://github.com/optiscaler/OptiScaler) into games on Windows and Linux. Built with Electron — no server, no dependencies at runtime beyond the app itself.
+A simple GUI for installing [OptiScaler](https://github.com/optiscaler/OptiScaler) into games on Windows and Linux — no terminal required.
 
-![screenshot placeholder](assets/screenshot.png)
-
-## What it does
-
-1. You pick your GPU vendor (Nvidia RTX/GTX, AMD RDNA 2/3/4, Intel Arc).
-2. You point it at a game directory.
-3. It scans for upscaler entry points (`nvngx_dlss.dll`, `libxess.dll`, `amd_fidelityfx_dx12.dll`, etc.).
-4. If compatible files are found, it downloads the correct OptiScaler release from GitHub, copies the right DLLs, and generates a pre-tuned `OptiScaler.ini`.
-
-### Spoofing logic per GPU
-
-| GPU | Entry DLL | DXGI spoof | FakeNvapi | Notes |
-|-----|-----------|------------|-----------|-------|
-| Nvidia RTX | `nvngx.dll` | off | off | Native DLSS path |
-| Nvidia GTX/16xx | `dxgi.dll` | on | off | Spoof needed for DLSS |
-| AMD RDNA 2/3 | `dxgi.dll` | on | on | Anti-Lag 2 via FakeNvapi |
-| AMD RDNA 4 | `dxgi.dll` | on | on | FSR4 native + spoof for DLSS input |
-| Intel Arc | `dxgi.dll` | on | off | Activates XMX path for XeSS |
-
-### Important: online games
-
-**Do not install OptiScaler into online or multiplayer games.** GPU spoofing and DLL injection can trigger anti-cheat software. This installer does not enforce this restriction — that's your responsibility.
+> **This project is not affiliated with the OptiScaler team.** It fetches OptiScaler directly from the [official GitHub releases](https://github.com/optiscaler/OptiScaler/releases).
 
 ---
 
-## Development setup
+## Download
 
-### Requirements
+Go to the [Releases](https://github.com/dario-gms/OptiScaler-Installer/releases) page and grab the file for your system:
 
-- Node.js 18+ ([nodejs.org](https://nodejs.org))
-- npm 9+
-- Git
-
-On Linux, also install `unzip` if it isn't already present (`apt install unzip` or equivalent).  
-On Windows, `Expand-Archive` (PowerShell built-in) is used instead.
-
-### Install dependencies
-
-```bash
-git clone https://github.com/dario-gms/OptiScaler-Installer
-cd OptiScaler-Installer
-npm install
-```
-
-### Run in development
-
-```bash
-npm start
-```
-
-This opens the Electron window. The `window.electronAPI` bridge is active, so folder browsing, scanning, and installation all work against the real filesystem.
+| Platform | File |
+|----------|------|
+| Windows (installer) | `OptiScaler Installer Setup 1.2.1.exe` |
+| Windows (portable)  | `OptiScaler Installer 1.2.1.exe` |
+| Linux               | `OptiScaler Installer-1.2.1.AppImage` |
+| Linux (Debian/Ubuntu) | `optiscaler-installer_1.2.1_amd64.deb` |
 
 ---
 
-## Building releases
+## How to use
 
-`electron-builder` handles packaging. Outputs go to `dist/`.
+1. **Select your GPU** — pick your vendor and series from the list
+2. **Select the game folder** — point to the game's installation directory (the root is fine, no need to find the exact executable)
+3. **Scan** — the installer finds the right location and checks for upscaler support
+4. **Configure** — adjust options if needed (defaults are tuned for your GPU)
+5. **Install** — OptiScaler is downloaded from GitHub and installed automatically
 
-### Windows (from a Windows machine or CI)
-
-```bash
-npm run build:win
-```
-
-Produces:
-- `dist/OptiScaler Installer Setup 1.0.0.exe` — NSIS installer
-- `dist/OptiScaler Installer 1.0.0.exe` — portable single-file exe
-
-### Linux (from a Linux machine or CI)
-
-```bash
-npm run build:linux
-```
-
-Produces:
-- `dist/OptiScaler Installer-1.0.0.AppImage` — portable, runs on any x64 distro
-- `dist/optiscaler-installer_1.0.0_amd64.deb` — Debian/Ubuntu package
-
-### Both at once
-
-```bash
-npm run build:all
-```
+All files that get replaced are backed up first. You can restore them at any time using the **Uninstall / Restore** tab.
 
 ---
 
-## Automated releases with GitHub Actions
+## Supported GPUs
 
-This project uses GitHub Actions to automatically build and create releases.
-
-### Workflow overview
-
-The workflow (`.github/workflows/build.yml`) is triggered on every tag push matching `v*`:
-
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-**What happens automatically:**
-1. ✅ Windows build runs on `windows-latest`
-2. ✅ Linux build runs on `ubuntu-latest`
-3. ✅ Both builds upload their artifacts
-4. ✅ Release is created with all files attached (`.exe`, `.AppImage`, `.deb`, etc.)
-
-### Workflow file
-
-`.github/workflows/build.yml` configuration:
-
-```yaml
-name: Build and Release
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest]
-    # ... build steps ...
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    # ... release steps with skip_existing: true ...
-```
-
-**Key points:**
-- Builds run in **parallel** for Windows and Linux
-- Release job **waits for both builds** to complete
-- `skip_existing: true` prevents errors if re-running the workflow
-
-### Creating a release
-
-```bash
-# 1. Commit your changes
-git add .
-git commit -m "your message"
-git push
-
-# 2. Create and push a tag
-git tag v1.0.2
-git push origin v1.0.2
-```
-
-That's it! GitHub Actions will build and release automatically. Check the **Actions** tab to monitor progress.
+| GPU | Notes |
+|-----|-------|
+| Nvidia RTX (20xx–50xx) | Native DLSS — no spoofing needed |
+| Nvidia GTX / 16xx | DLSS via GPU spoof |
+| AMD RX 5000 / RDNA 1 | FSR 2/3 + FakeNvapi (Anti-Lag 2) |
+| AMD RX 6000–7000 / RDNA 2–3 | FSR 2/3 + FakeNvapi (Anti-Lag 2) |
+| AMD RX 9000 / RDNA 4 | Native FSR4 + FakeNvapi |
+| Intel Arc (A/B series) | XeSS via DXGI spoof |
 
 ---
 
-## Project structure
+## Requirements
 
-```
-optiscaler-installer/
-├── main.js          # Electron main process — IPC handlers, filesystem ops, download logic
-├── preload.js       # Context bridge — exposes electronAPI to renderer safely
-├── index.html       # Entire UI (HTML/CSS/JS, no bundler needed)
-├── package.json     # npm + electron-builder config
-├── assets/
-│   ├── icon.ico     # Windows icon (256x256 recommended)
-│   └── icon.png     # Linux icon (512x512 recommended)
-└── .github/
-    └── workflows/
-        └── build.yml
-```
-
-The UI has no external CSS or JS dependencies — intentional. Keeping it self-contained means no bundler, no node_modules leaking into the renderer, and a faster iteration loop.
+OptiScaler requires a game that already ships with **DLSS 2+, XeSS, or FSR 2+**. The scanner will tell you if a game is compatible. If no upscaler DLL is found, OptiScaler has nothing to hook into.
 
 ---
 
-## Adding icons
+## ⚠️ Do not use with online games
 
-Place a 256×256 `icon.ico` (Windows) and 512×512 `icon.png` (Linux) in `assets/`. electron-builder picks them up automatically from the `build.win.icon` and `build.linux.icon` paths in `package.json`.
-
-Tools to generate `.ico` from PNG: [ImageMagick](https://imagemagick.org/) or [icoutils](https://www.nongnu.org/icoutils/).
-
-```bash
-convert icon.png -resize 256x256 icon.ico
-```
+GPU spoofing and DLL injection can trigger anti-cheat software. **Do not install OptiScaler into any game with online or multiplayer components.** This installer does not enforce this — it is your responsibility.
 
 ---
 
-## How the scan works
+## Uninstalling
 
-`main.js` walks up to 3 directory levels from the game path, looking for files matching the known upscaler DLL list. It restricts recursion to directories named `bin`, `binaries`, `win64`, `win32`, `x64`, `game`, and `engine` to avoid scanning entire drives.
-
-A scan passes (`Compatible`) when:
-- At least one `.exe` file is found in the root directory, and
-- At least one known upscaler entry point DLL is present anywhere in the scanned tree.
-
-If neither condition is met, the installer blocks progression and shows an explanation.
+Open the **Uninstall / Restore** tab, select the game folder, and click **Uninstall & Restore**. The installer will remove all OptiScaler files and restore any originals it backed up.
 
 ---
 
 ## License
 
 MIT. See `LICENSE`.
-
-This project is not affiliated with the OptiScaler team. It is a community-made installer that fetches OptiScaler directly from the [official GitHub releases](https://github.com/optiscaler/OptiScaler/releases).

@@ -310,7 +310,7 @@
 <header>
   <div class="logo-mark"></div>
   <span class="logo-text">OptiScaler</span>
-  <span class="logo-sub">Installer v1.2.0</span>
+  <span class="logo-sub">Installer v1.2.1</span>
 </header>
 
 <!-- Mode tabs -->
@@ -349,9 +349,14 @@
             <div class="gpu-name">GTX / 16xx<br><span>Pascal, Turing (no Tensor)</span></div>
             <div class="gpu-note">DLSS spoof required</div>
           </div>
+          <div class="gpu-card" data-gpu="amd-rdna1" data-vendor="amd">
+            <div class="gpu-vendor">AMD</div>
+            <div class="gpu-name">RX 5000 / RDNA 1<br><span>RX 5500 / 5600 / 5700</span></div>
+            <div class="gpu-note">FakeNvapi + DXGI spoof · FSR 2/3</div>
+          </div>
           <div class="gpu-card" data-gpu="amd-rdna3" data-vendor="amd">
             <div class="gpu-vendor">AMD</div>
-            <div class="gpu-name">RX 7000 / RDNA 3<br><span>& RDNA 2 (RX 6000)</span></div>
+            <div class="gpu-name">RX 6000–7000 / RDNA 2–3<br><span>RX 6000 / RX 7000 series</span></div>
             <div class="gpu-note">FakeNvapi + DXGI spoof</div>
           </div>
           <div class="gpu-card" data-gpu="amd-rdna4" data-vendor="amd">
@@ -371,13 +376,13 @@
       <!-- Step 1: Directory -->
       <div class="panel" id="panel-1">
         <div class="panel-title">Game directory</div>
-        <p class="panel-desc">Point to the folder containing the game's main executable. The scanner detects upscaler DLL entry points from this location.</p>
+        <p class="panel-desc">Select any folder inside your game's installation — you don't need to navigate to the exact executable. The scanner will automatically find the correct directory for installation.</p>
         <div class="path-row">
           <input type="text" class="path-input" id="game-path-input" placeholder="e.g. C:\Games\SomeGame or /home/user/.steam/steamapps/common/..." />
           <button class="btn" onclick="browseFolder()">Browse</button>
         </div>
         <div class="info-box">
-          <strong>What the scanner looks for:</strong> nvngx_dlss.dll, sl.dlss.dll, libxess.dll, amd_fidelityfx_dx12.dll, amd_fidelityfx_upscaler_dx12.dll, amd_fidelityfx_framegeneration_dx12.dll, ffx_fsr2/fsr3 variants, and their Linux equivalents. At least one must be present.
+          <strong>What the scanner looks for:</strong> nvngx_dlss.dll, sl.dlss.dll, libxess.dll, amd_fidelityfx_dx12.dll, amd_fidelityfx_upscaler_dx12.dll, amd_fidelityfx_framegeneration_dx12.dll, ffx_fsr2/fsr3 variants, and their Linux equivalents. At least one must be present alongside a game executable.
         </div>
       </div>
 
@@ -495,7 +500,7 @@
 <div class="tab-panel" id="tabpanel-uninstall">
   <div class="uninstall-content">
     <div class="panel-title">Uninstall / Restore backup</div>
-    <p class="panel-desc">Select the game directory where OptiScaler was installed. The installer will restore any files it backed up and remove everything it added.</p>
+    <p class="panel-desc">Select the game's root installation folder — you don't need to find the exact subfolder. The uninstaller will automatically locate the OptiScaler installation inside it.</p>
 
     <div class="path-row">
       <input type="text" class="path-input" id="uninstall-path-input" placeholder="Game directory path..." />
@@ -506,8 +511,8 @@
     <div id="uninstall-manifest-area" style="display:none">
 
       <div id="no-manifest-msg" style="display:none" class="info-box danger-box">
-        <strong>No OptiScaler installation found</strong> in this directory.<br>
-        Only installations performed by this installer can be automatically uninstalled (requires the <code style="font-family:var(--mono)">optiscaler_manifest.json</code> file).
+        <strong>No OptiScaler installation found</strong> in this folder or its subfolders.<br>
+        Only installations performed by this installer can be automatically uninstalled (requires the <code style="font-family:var(--mono)">optiscaler_manifest.json</code> file). Try selecting the game's root installation folder.
       </div>
 
       <div id="manifest-found-area" style="display:none">
@@ -540,6 +545,7 @@ const state = {
   totalSteps: 5,
   gpu: null, gpuVendor: null,
   gamePath: '',
+  installPath: '',   // resolved install target (dir with game EXE + DLLs)
   scanResults: null,
   scanPassed: false,
   existingInstall: null,
@@ -549,7 +555,8 @@ const state = {
 const GPU_NOTES = {
   'nvidia-rtx': 'RTX GPUs support DLSS natively. OptiScaler will use your existing nvngx_dlss.dll. DXGI spoof is auto-disabled on RTX.',
   'nvidia-gtx': 'GTX and 16xx GPUs lack Tensor cores. OptiScaler will spoof the GPU as RTX via DXGI to enable the DLSS pathway.',
-  'amd-rdna3':  'AMD GPUs require DXGI spoofing (reports as RTX 4090) and FakeNvapi for Anti-Lag 2 / Reflex. FSR is the recommended output backend.',
+  'amd-rdna1':  'RX 5000 series (RDNA 1) supports FSR 2/3 and XeSS via OptiScaler. DXGI spoofing and FakeNvapi (Anti-Lag 2) are enabled. FSR4 is not available on RDNA1.',
+  'amd-rdna3':  'AMD RDNA 2/3 GPUs require DXGI spoofing (reports as RTX 4090) and FakeNvapi for Anti-Lag 2 / Reflex. FSR is the recommended output backend.',
   'amd-rdna4':  'RDNA4 GPUs get native FSR4 support. DXGI spoofing still needed to unlock DLSS inputs. Anti-Lag 2 via FakeNvapi.',
   'intel-arc':  'Intel Arc activates its XMX path when DXGI spoofing is active and XeSS is detected. XeSS is the recommended output backend.',
 };
@@ -688,12 +695,14 @@ async function runScan() {
 
   let found = {}, exeFound = false;
   state.existingInstall = null;
+  state.installPath = state.gamePath;
 
   if (window.electronAPI) {
     try {
       const res = await window.electronAPI.scanDirectory(state.gamePath);
       found = res.found;
       exeFound = res.exeFound;
+      state.installPath = res.installPath || state.gamePath;
       state.existingInstall = res.existingInstall;
     } catch (e) {
       addLog('scan-log', 'Scan error: ' + e.message, 'err');
@@ -704,15 +713,25 @@ async function runScan() {
     await sleep(400);
     addLog('scan-log', 'Demo mode — simulating scan results', 'warn');
     found = {
-      'nvngx_dlss.dll': state.gamePath + '\\nvngx_dlss.dll',
-      'amd_fidelityfx_upscaler_dx12.dll': state.gamePath + '\\amd_fidelityfx_upscaler_dx12.dll',
-      'amd_fidelityfx_framegeneration_dx12.dll': state.gamePath + '\\amd_fidelityfx_framegeneration_dx12.dll',
+      'nvngx_dlss.dll': state.gamePath + '\\Binaries\\Win64\\nvngx_dlss.dll',
+      'amd_fidelityfx_upscaler_dx12.dll': state.gamePath + '\\Binaries\\Win64\\amd_fidelityfx_upscaler_dx12.dll',
+      'amd_fidelityfx_framegeneration_dx12.dll': state.gamePath + '\\Binaries\\Win64\\amd_fidelityfx_framegeneration_dx12.dll',
     };
     exeFound = true;
+    state.installPath = state.gamePath + '\\Binaries\\Win64';
   }
 
   prog(55);
-  addLog('scan-log', `Executable found: ${exeFound ? 'yes' : 'no'}`, exeFound ? 'ok' : 'warn');
+
+  if (exeFound) {
+    const isSameDir = state.installPath === state.gamePath;
+    addLog('scan-log', `Game executable found`, 'ok');
+    if (!isSameDir) {
+      addLog('scan-log', `Install target: ${state.installPath}`, 'info');
+    }
+  } else {
+    addLog('scan-log', 'No game executable found — check directory', 'warn');
+  }
 
   const foundKeys = Object.keys(found);
   const upscalerHits = foundKeys.filter(f => KNOWN_FILES[f]?.trigger);
@@ -755,11 +774,13 @@ async function runScan() {
 
   const badge = document.getElementById('scan-status-badge');
   if (state.scanPassed) {
-    badge.innerHTML = `<div class="status-badge ok"><div class="status-dot"></div>Compatible — ${upscalerHits.length} upscaler entry point(s) found</div>`;
+    const isSameDir = state.installPath === state.gamePath;
+    const installNote = isSameDir ? '' : `<br><span style="font-size:12px;color:var(--text-dim);font-family:var(--mono)">Install target: ${state.installPath}</span>`;
+    badge.innerHTML = `<div class="status-badge ok"><div class="status-dot"></div>Compatible — ${upscalerHits.length} upscaler entry point(s) found</div>${installNote}`;
     addLog('scan-log', `${upscalerHits.length} upscaler hook(s) found. Ready to install.`, 'ok');
   } else if (!exeFound) {
-    badge.innerHTML = `<div class="status-badge fail"><div class="status-dot"></div>No game executable found in this directory</div>`;
-    addLog('scan-log', 'No .exe found. Check the directory and try again.', 'err');
+    badge.innerHTML = `<div class="status-badge fail"><div class="status-dot"></div>No game executable found — try selecting the game's root folder</div>`;
+    addLog('scan-log', 'No .exe found. Try selecting the root installation folder of the game.', 'err');
   } else {
     badge.innerHTML = `<div class="status-badge warn"><div class="status-dot"></div>No upscaler DLLs found — OptiScaler may not work</div>`;
     addLog('scan-log', 'No known upscaler DLLs found. Game may not support DLSS/XeSS/FSR.', 'warn');
@@ -853,7 +874,9 @@ async function runInstall() {
     version:     document.getElementById('version-select').value,
     shortcutKey: state.shortcutKey,
     gpu:         state.gpu, gpuVendor: state.gpuVendor,
-    gamePath:    state.gamePath, scanResults: state.scanResults,
+    gamePath:    state.gamePath,
+    installPath: state.installPath || state.gamePath,
+    scanResults: state.scanResults,
   };
 
   if (!window.electronAPI) {
@@ -960,6 +983,7 @@ function resetAll() {
   state.step = 0;
   state.gpu = state.gpuVendor = null;
   state.gamePath = '';
+  state.installPath = '';
   state.scanResults = null;
   state.scanPassed = false;
   state.existingInstall = null;
@@ -1010,6 +1034,7 @@ async function checkInstall() {
       installedAt: new Date().toISOString(),
       gpu: 'amd-rdna3',
       hookDll: 'dxgi.dll',
+      _installDir: dir + '\\Binaries\\Win64',
       files: [
         { dest: 'dxgi.dll',                    backedUp: false, backupPath: null },
         { dest: 'amd_fidelityfx_dx12.dll',     backedUp: true,  backupPath: 'backup/amd...' },
@@ -1025,11 +1050,15 @@ async function checkInstall() {
 
   if (!manifest) return;
 
+  const installDirRow = (manifest._installDir && manifest._installDir !== dir)
+    ? `<div class="manifest-row"><span class="manifest-label">Install path</span><span class="manifest-value" style="font-size:11px;word-break:break-all">${manifest._installDir}</span></div>`
+    : '';
   document.getElementById('manifest-info').innerHTML = `
     <div class="manifest-row"><span class="manifest-label">Version</span><span class="manifest-value">${manifest.version}</span></div>
     <div class="manifest-row"><span class="manifest-label">Installed</span><span class="manifest-value">${new Date(manifest.installedAt).toLocaleString()}</span></div>
     <div class="manifest-row"><span class="manifest-label">GPU profile</span><span class="manifest-value">${manifest.gpu}</span></div>
     <div class="manifest-row"><span class="manifest-label">Hook DLL</span><span class="manifest-value">${manifest.hookDll}</span></div>
+    ${installDirRow}
   `;
 
   const fileList = document.getElementById('uninstall-file-list');
